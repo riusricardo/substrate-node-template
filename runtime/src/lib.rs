@@ -254,7 +254,7 @@ impl sudo::Trait for Runtime {
 /// Implement the nft pallet
 impl nft::Trait for Runtime {
     type Event = Event;
-    type TokenInfo = Vec<u8>;
+    type AssetInfo = Vec<u8>;
 }
 
 construct_runtime!(
