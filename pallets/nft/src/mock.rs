@@ -11,7 +11,7 @@ use sp_runtime::{
 };
 
 impl_outer_origin! {
-    pub enum Origin for Test {}
+	pub enum Origin for Test where system = frame_system {}
 }
 
 // For testing the pallet, we construct most of a mock runtime. This means
@@ -52,6 +52,7 @@ impl system::Trait for Test {
 }
 impl Trait for Test {
     type Event = ();
+    type AssetAdmin = frame_system::EnsureRoot<Self::AccountId>;
     type AssetInfo = Vec<u8>;
 }
 pub type NFT = Module<Test>;
