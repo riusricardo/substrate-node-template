@@ -50,6 +50,13 @@ impl system::Trait for Test {
     type OnNewAccount = ();
     type OnKilledAccount = ();
 }
+
+impl timestamp::Trait for Test {
+    type Moment = u64;
+    type OnTimestampSet = ();
+    type MinimumPeriod = ();
+  }
+
 parameter_types! {
     pub const MaxAssets: u128 = 5;
     pub const MaxAssetsPerUser: u64 = 2;

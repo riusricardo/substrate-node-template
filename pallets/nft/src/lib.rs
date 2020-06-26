@@ -31,7 +31,7 @@
 
 #![cfg_attr(not(feature = "std"), no_std)]
 
-use codec::FullCodec;
+use codec::{FullCodec, Encode, Decode};
 use frame_support::{
     decl_error, decl_event, decl_module, decl_storage, dispatch, ensure,
     traits::{EnsureOrigin, Get},
@@ -40,6 +40,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 use sp_runtime::traits::{Hash, Member};
 use sp_std::fmt::Debug;
+use sp_core::RuntimeDebug;
 
 #[cfg(test)]
 mod mock;
@@ -47,7 +48,7 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
-pub trait Trait<I = DefaultInstance>: system::Trait {
+pub trait Trait<I = DefaultInstance>: system::Trait + timestamp::Trait {
     // The dispatch origin that is able to mint new instances of this type of asset.
     type AssetAdmin: EnsureOrigin<Self::Origin>;
     // The data type that is used to describe this type of asset.
@@ -57,6 +58,13 @@ pub trait Trait<I = DefaultInstance>: system::Trait {
     // The maximum number of this type of asset that any single account may own.
     type UserAssetLimit: Get<u64>;
     type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+}
+
+// The asset type and the creation time.
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Encode, Decode, Default, RuntimeDebug)]
+pub struct AssetData<AssetInfo, Moment> {
+    pub info: AssetInfo,
+    pub creation: Moment
 }
 
 // The runtime system's hashing algorithm is used to uniquely identify assets.
@@ -71,7 +79,7 @@ decl_storage! {
         // The total number of this type of asset owned by an account.
         TotalForAccount get(fn total_for_account): map hasher(blake2_128_concat) T::AccountId => u64 = 0;
         // A mapping from an asset owner & ID to the info for that asset.
-        AssetsForAccount get(fn assets_for_account): double_map hasher(blake2_128_concat) T::AccountId, hasher(identity) AssetId<T> => T::AssetInfo;
+        AssetsForAccount get(fn assets_for_account): double_map hasher(blake2_128_concat) T::AccountId, hasher(identity) AssetId<T> => AssetData<T::AssetInfo, T::Moment>;
         // A mapping from an asset ID to the account that owns it.
         AccountForAsset get(fn account_for_asset): map hasher(identity) AssetId<T> => T::AccountId;
     }
@@ -129,6 +137,10 @@ decl_module! {
         pub fn mint(origin, owner_account: T::AccountId, asset_info: T::AssetInfo) -> dispatch::DispatchResult {
             T::AssetAdmin::ensure_origin(origin)?;
 
+            let asset_data = AssetData{
+                info: asset_info.clone(),
+                creation: <timestamp::Module<T>>::now()
+            };
             let asset_id = T::Hashing::hash_of(&asset_info);
 
             ensure!(!AccountForAsset::<T, I>::contains_key(&asset_id), Error::<T, I>::AssetExists);
@@ -137,7 +149,7 @@ decl_module! {
 
             Total::<I>::mutate(|total| *total += 1);
             TotalForAccount::<T, I>::mutate(&owner_account, |total| *total += 1);
-            AssetsForAccount::<T, I>::insert(&owner_account, &asset_id, asset_info);
+            AssetsForAccount::<T, I>::insert(&owner_account, &asset_id, asset_data);
             AccountForAsset::<T, I>::insert(&asset_id, &owner_account);
 
             Self::deposit_event(RawEvent::Minted(asset_id, owner_account));
@@ -185,8 +197,8 @@ decl_module! {
 
             TotalForAccount::<T, I>::mutate(&who, |total| *total -= 1);
             TotalForAccount::<T, I>::mutate(&dest_account, |total| *total += 1);
-            let asset_info = AssetsForAccount::<T, I>::take(who, &asset_id);
-            AssetsForAccount::<T, I>::insert(&dest_account, &asset_id, asset_info);
+            let asset_data = AssetsForAccount::<T, I>::take(who, &asset_id);
+            AssetsForAccount::<T, I>::insert(&dest_account, &asset_id, asset_data);
             AccountForAsset::<T, I>::insert(&asset_id, &dest_account);
 
             Self::deposit_event(RawEvent::Transferred(asset_id, dest_account));

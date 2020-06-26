@@ -20,9 +20,13 @@ fn mint() {
         assert_eq!(NFT::total(), 1);
         assert_eq!(NFT::burned(), 0);
         assert_eq!(NFT::total_for_account(1), 1);
+        let asset_data = AssetData{
+            info: Vec::<u8>::default(),
+            creation: <timestamp::Module<Test>>::now()
+        };
         assert_eq!(
             NFT::assets_for_account::<u64, H256>(1, Vec::<u8>::default().blake2_256().into()),
-            Vec::<u8>::default()
+            asset_data
         );
         assert_eq!(
             NFT::account_for_asset::<H256>(Vec::<u8>::default().blake2_256().into()),
@@ -94,9 +98,13 @@ fn burn() {
         assert_eq!(NFT::total(), 0);
         assert_eq!(NFT::burned(), 1);
         assert_eq!(NFT::total_for_account(1), 0);
+        let asset_data = AssetData{
+            info: vec![],
+            creation: <timestamp::Module<Test>>::now()
+        };
         assert_eq!(
             NFT::assets_for_account::<u64, H256>(1, Vec::<u8>::default().blake2_256().into()),
-            vec![]
+            asset_data
         );
         assert_eq!(
             NFT::account_for_asset::<H256>(Vec::<u8>::default().blake2_256().into()),
@@ -141,13 +149,21 @@ fn transfer() {
         assert_eq!(NFT::burned(), 0);
         assert_eq!(NFT::total_for_account(1), 0);
         assert_eq!(NFT::total_for_account(2), 1);
+        let asset_data = AssetData{
+            info: vec![],
+            creation: <timestamp::Module<Test>>::now()
+        };
         assert_eq!(
             NFT::assets_for_account::<u64, H256>(1, Vec::<u8>::default().blake2_256().into()),
-            vec![]
+            asset_data
         );
+        let asset_data2 = AssetData{
+            info: Vec::<u8>::default(),
+            creation: <timestamp::Module<Test>>::now()
+        };
         assert_eq!(
             NFT::assets_for_account::<u64, H256>(2, Vec::<u8>::default().blake2_256().into()),
-            Vec::<u8>::default()
+            asset_data2
         );
         assert_eq!(
             NFT::account_for_asset::<H256>(Vec::<u8>::default().blake2_256().into()),
